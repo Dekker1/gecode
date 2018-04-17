@@ -789,6 +789,13 @@ namespace Gecode { namespace FlatZinc {
       iv_lns.update(*this, f.iv_lns);
       intVarCount = f.intVarCount;
 
+      restart_status.update(*this, f.restart_status);
+      int_uniform_var.update(*this, f.int_uniform_var);
+      int_uniform_lb = f.int_uniform_lb;
+      int_uniform_ub = f.int_uniform_ub;
+      int_sol_var.update(*this, f.int_sol_var);
+      int_sol_orig.update(*this, f.int_sol_orig);
+
       if (needAuxVars) {
         IntVarArgs iva;
         for (int i=0; i<f.iv_aux.size(); i++) {
@@ -1999,6 +2006,47 @@ namespace Gecode { namespace FlatZinc {
 
   bool
   FlatZincSpace::slave(const MetaInfo& mi) {
+    if (mi.type() == MetaInfo::RESTART) {
+      bool ret = false;
+      if (restart_status.size() > 0) {
+        assert(restart_status.size() == 1);
+        if (!mi.last()) {
+          rel(*this, restart_status[0], IRT_EQ, 1); // 1: UNKNOWN
+        } else if (mi.solution() > 0) {
+          rel(*this, restart_status[0], IRT_EQ, 3); // 3: SAT
+        } else {
+          rel(*this, restart_status[0], IRT_EQ, 2); // 3: UNSAT
+        }
+        restart_status = IntVarArray(*this, 0);
+        ret = true;
+      }
+
+
+      if (int_uniform_var.size() > 0){
+        for (int i = 0; i < int_uniform_var.size(); ++i) {
+          rel(*this, int_uniform_var[i], IRT_EQ,
+              int_uniform_lb[i] + _random(static_cast<unsigned int>(int_uniform_ub[i] - int_uniform_lb[i]))
+          );
+        }
+        int_uniform_var = IntVarArray(*this, 0);
+        ret = true;
+      }
+
+      if (int_sol_var.size() > 0 && mi.last()) {
+        assert(int_sol_var.size() == int_sol_orig.size());
+        const FlatZincSpace& last = static_cast<const FlatZincSpace&>(*mi.last());
+        for (int i = 0; i < int_sol_var.size(); ++i) {
+          rel(*this, int_sol_var[i], IRT_EQ, last.int_sol_orig[i]);
+        }
+        int_sol_var = IntVarArray(*this, 0);
+        ret = true;
+      }
+
+      if (ret) {
+        return false;
+      }
+    }
+
     if ((mi.type() == MetaInfo::RESTART) && (mi.restart() != 0) &&
         (_lns > 0) && (mi.last()==nullptr) && (_lnsInitialSolution.size()>0)) {
       for (unsigned int i=iv_lns.size(); i--;) {

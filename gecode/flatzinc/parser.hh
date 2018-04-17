@@ -212,6 +212,10 @@ namespace Gecode { namespace FlatZinc {
 
     std::vector<ConExpr*> domainConstraints;
 
+    int status_idx = -1;
+    std::vector<std::array<int, 3>> int_uniform;
+    std::vector<std::array<int, 2>> int_sol;
+
     bool hadError;
     std::ostream& err;
 
