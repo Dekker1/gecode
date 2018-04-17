@@ -790,6 +790,7 @@ namespace Gecode { namespace FlatZinc {
       intVarCount = f.intVarCount;
 
       restart_status.update(*this, f.restart_status);
+      restart_number.update(*this, f.restart_number);
       int_uniform_var.update(*this, f.int_uniform_var);
       int_uniform_lb = f.int_uniform_lb;
       int_uniform_ub = f.int_uniform_ub;
@@ -2020,7 +2021,11 @@ namespace Gecode { namespace FlatZinc {
         restart_status = IntVarArray(*this, 0);
         ret = true;
       }
-
+      if (restart_number.size() > 0) {
+        rel(*this, restart_number[0], IRT_EQ, mi.restart());
+        restart_number = IntVarArray(*this, 0);
+        ret = true;
+      }
 
       if (int_uniform_var.size() > 0){
         for (int i = 0; i < int_uniform_var.size(); ++i) {
@@ -2036,7 +2041,7 @@ namespace Gecode { namespace FlatZinc {
         assert(int_sol_var.size() == int_sol_orig.size());
         const FlatZincSpace& last = static_cast<const FlatZincSpace&>(*mi.last());
         for (int i = 0; i < int_sol_var.size(); ++i) {
-          rel(*this, int_sol_var[i], IRT_EQ, last.int_sol_orig[i]);
+          rel(*this, int_sol_var[i], IRT_EQ, last.int_sol_orig[i].val());
         }
         int_sol_var = IntVarArray(*this, 0);
         ret = true;

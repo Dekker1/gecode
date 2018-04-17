@@ -482,6 +482,8 @@ namespace Gecode { namespace FlatZinc {
 
     /// Status() variable
     Gecode::IntVarArray restart_status;
+    /// restart_number() variable
+    Gecode::IntVarArray restart_number;
     /// int_rnd arguments
     Gecode::IntVarArray int_uniform_var;
     int* int_uniform_lb;
