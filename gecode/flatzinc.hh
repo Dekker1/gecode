@@ -88,6 +88,7 @@
 #include <gecode/flatzinc/conexpr.hh>
 #include <gecode/flatzinc/ast.hh>
 #include <gecode/flatzinc/varspec.hh>
+#include <array>
 
 /**
  * \namespace Gecode::FlatZinc
@@ -478,6 +479,16 @@ namespace Gecode { namespace FlatZinc {
 
     /// The integer variables used in LNS
     Gecode::IntVarArray iv_lns;
+
+    /// Status() variable
+    Gecode::IntVarArray restart_status;
+    /// int_rnd arguments
+    Gecode::IntVarArray int_uniform_var;
+    int* int_uniform_lb;
+    int* int_uniform_ub;
+    /// int_sol arguments
+    Gecode::IntVarArray int_sol_var;
+    Gecode::IntVarArray int_sol_orig;
 
     /// Indicates whether an integer variable is introduced by mzn2fzn
     std::vector<bool> iv_introduced;

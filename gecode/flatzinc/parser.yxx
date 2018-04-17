@@ -316,6 +316,28 @@ void initfg(ParserState* pp) {
     delete pp->floatvars[i].second;
     pp->floatvars[i].second = NULL;
   }
+  if (pp->status_idx >= 0) {
+    pp->fg->restart_status = IntVarArray(*(pp->fg), 1);
+    pp->fg->restart_status[0] = pp->fg->iv[pp->status_idx];
+  }
+  if (!(pp->int_uniform.empty())) {
+    pp->fg->int_uniform_var = IntVarArray(*(pp->fg), pp->int_uniform.size());
+    pp->fg->int_uniform_lb = new int[pp->int_uniform.size()];
+    pp->fg->int_uniform_ub = new int[pp->int_uniform.size()];
+    for (int i = 0; i < pp->int_uniform.size(); ++i) {
+      pp->fg->int_uniform_lb[i] = pp->int_uniform[i][0];
+      pp->fg->int_uniform_ub[i] = pp->int_uniform[i][1];
+      pp->fg->int_uniform_var[i] = pp->fg->iv[pp->int_uniform[i][2]];
+    }
+  }
+  if (!(pp->int_sol.empty())) {
+    pp->fg->int_sol_orig = IntVarArray(*(pp->fg), pp->int_sol.size());
+    pp->fg->int_sol_var = IntVarArray(*(pp->fg), pp->int_sol.size());
+    for (int i = 0; i < pp->int_sol.size(); ++i) {
+      pp->fg->int_sol_orig[i] = pp->fg->iv[(pp->int_sol[i][0])];
+      pp->fg->int_sol_var[i] = pp->fg->iv[(pp->int_sol[i][1])];
+    }
+  }
   if (!pp->hadError) {
     pp->fg->postConstraints(pp->domainConstraints);
     pp->fg->postConstraints(pp->constraints);
@@ -347,7 +369,7 @@ void fillPrinter(ParserState& pp, Gecode::FlatZinc::Printer& p) {
       p.addSetVarName(pp.setvars[i].first);
     }
   }
-#endif  
+#endif
 }
 
 AST::Node* arrayOutput(AST::Call* ann) {
@@ -1429,7 +1451,16 @@ constraint_item :
         ParserState *pp = static_cast<ParserState*>(parm);
         if (!pp->hadError) {
           std::string cid($2);
-          if (cid=="int_eq" && $4->a[0]->isIntVar() && $4->a[1]->isIntVar()) {
+          if (cid=="status" && $4->a[0]->isIntVar()) {
+            pp->status_idx = $4->a[0]->getIntVar();
+          } else if (cid=="int_uniform" && $4->a[0]->isInt() && $4->a[1]->isInt() && $4->a[2]->isIntVar()) {
+            int base = getBaseIntVar(pp,$4->a[2]->getIntVar());
+            pp->int_uniform.emplace_back(std::array<int, 3>{ $4->a[0]->getInt(), $4->a[1]->getInt(), base });
+          } else if (cid=="int_sol" && $4->a[0]->isIntVar() && $4->a[1]->isIntVar()) {
+            int base0 = getBaseIntVar(pp,$4->a[0]->getIntVar());
+            int base1 = getBaseIntVar(pp,$4->a[1]->getIntVar());
+            pp->int_sol.emplace_back(std::array<int, 2>{ base0, base1 });
+          } else if (cid=="int_eq" && $4->a[0]->isIntVar() && $4->a[1]->isIntVar()) {
             int base0 = getBaseIntVar(pp,$4->a[0]->getIntVar());
             int base1 = getBaseIntVar(pp,$4->a[1]->getIntVar());
             if (base0 > base1) {
