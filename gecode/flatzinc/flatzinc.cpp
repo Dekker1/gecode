@@ -86,6 +86,7 @@ namespace Gecode { namespace FlatZinc {
 
   // Default random number generator
   Rnd defrnd(0);
+  long long FlatZincSpace::copies = 1;
 
   /**
    * \brief Branching on the introduced variables
@@ -849,6 +850,7 @@ namespace Gecode { namespace FlatZinc {
         fv_aux = FloatVarArray(*this, fva);
       }
 #endif
+      copies++;
     }
 
   FlatZincSpace::FlatZincSpace(Rnd& random)
@@ -1982,6 +1984,7 @@ namespace Gecode { namespace FlatZinc {
       runEngine<DFS>(out,p,opt,t_total);
       break;
     }
+    out << "%% copies: " << copies << std::endl;
   }
 
   void

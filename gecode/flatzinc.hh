@@ -421,6 +421,7 @@ namespace Gecode { namespace FlatZinc {
    */
   class GECODE_FLATZINC_EXPORT FlatZincSpace : public Space {
   public:
+    static long long copies;
     enum Meth {
       SAT, //< Solve as satisfaction problem
       MIN, //< Solve as minimization problem
