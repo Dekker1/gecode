@@ -51,10 +51,9 @@ namespace Gecode { namespace FlatZinc {
   }
 
   ExecStatus LastVal::propagate(Space &home, const ModEventDelta &med) {
-    if (x0.assigned()) {
-      (*s) = x0.val();
-    }
-    return ES_FIX;
+    assert(x0.assigned());
+    (*s) = x0.val();
+    return home.ES_SUBSUMED(*this);
   }
 
   ExecStatus LastVal::post(Home home, Int::IntView x0, int *s) {
