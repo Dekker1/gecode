@@ -39,6 +39,7 @@
 #define YYLEX_PARAM static_cast<ParserState*>(parm)->yyscanner
 #include <gecode/flatzinc.hh>
 #include <gecode/flatzinc/parser.hh>
+#include <gecode/flatzinc/lastval.hh>
 #include <iostream>
 #include <fstream>
 
@@ -340,6 +341,15 @@ void initfg(ParserState* pp) {
     for (int i = 0; i < pp->int_sol.size(); ++i) {
       pp->fg->int_sol_orig[i] = pp->fg->iv[(pp->int_sol[i][0])];
       pp->fg->int_sol_var[i] = pp->fg->iv[(pp->int_sol[i][1])];
+    }
+  }
+  if (!(pp->int_lastval.empty())) {
+    pp->fg->int_lastval_var = IntVarArray(*(pp->fg), pp->int_lastval.size());
+    pp->fg->int_lastval_val = new std::shared_ptr<int>[pp->int_lastval.size()];
+    for (int i = 0; i < pp->int_lastval.size(); ++i) {
+      pp->fg->int_lastval_var[i] = pp->fg->iv[(pp->int_lastval[i][1])];
+      pp->fg->int_lastval_val[i] = std::make_shared<int>();
+      LastVal::post(*(pp->fg), pp->fg->iv[(pp->int_lastval[i][0])], pp->fg->int_lastval_val[i]);
     }
   }
   if (!pp->hadError) {
@@ -1459,6 +1469,10 @@ constraint_item :
             pp->status_idx = $4->a[0]->getIntVar();
           } else if (cid=="restart_number" && $4->a[0]->isIntVar()) {
               pp->restart_number_idx = $4->a[0]->getIntVar();
+          } else if (cid=="int_lastval" && $4->a[0]->isIntVar() && $4->a[1]->isIntVar()) {
+            int base0 = getBaseIntVar(pp,$4->a[0]->getIntVar());
+            int base1 = getBaseIntVar(pp,$4->a[1]->getIntVar());
+            pp->int_lastval.emplace_back(std::array<int, 2>{ base0, base1 });
           } else if (cid=="int_uniform" && $4->a[0]->isInt() && $4->a[1]->isInt() && $4->a[2]->isIntVar()) {
             int base = getBaseIntVar(pp,$4->a[2]->getIntVar());
             pp->int_uniform.emplace_back(std::array<int, 3>{ $4->a[0]->getInt(), $4->a[1]->getInt(), base });

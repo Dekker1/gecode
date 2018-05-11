@@ -42,12 +42,12 @@ namespace Gecode { namespace FlatZinc {
   class LastVal : public UnaryPropagator<IntView, PC_INT_VAL> {
   protected:
     using UnaryPropagator<IntView, PC_INT_VAL>::x0;
-    int* s;
+    std::shared_ptr<int> s;
 
     /// Constructor for cloning \a p
     LastVal(Space& home, LastVal& p);
     /// Constructor for posting
-    LastVal(Home home, Int::IntView x0, int* s);
+    LastVal(Home home, Int::IntView x0, std::shared_ptr<int> s);
   public:
     /// Copy propagator during cloning
     virtual Actor* copy(Space& home);
@@ -56,7 +56,7 @@ namespace Gecode { namespace FlatZinc {
     /// Perform propagation
     virtual ExecStatus propagate(Space& home, const ModEventDelta& med);
 
-    static ExecStatus post(Home home, Int::IntView x0, int* s);
+    static ExecStatus post(Home home, Int::IntView x0, std::shared_ptr<int> s);
   };
 
 }}

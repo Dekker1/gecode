@@ -39,7 +39,7 @@ namespace Gecode { namespace FlatZinc {
   LastVal::LastVal(Space &home, LastVal &p)
       : UnaryPropagator<IntView, PC_INT_VAL>(home,p), s(p.s) {}
 
-  LastVal::LastVal(Home home, Int::IntView x0, int *s)
+  LastVal::LastVal(Home home, Int::IntView x0, std::shared_ptr<int> s)
       : s(s), UnaryPropagator<IntView, PC_INT_VAL>(home, x0) {}
 
   Actor* LastVal::copy(Space &home) {
@@ -56,7 +56,7 @@ namespace Gecode { namespace FlatZinc {
     return home.ES_SUBSUMED(*this);
   }
 
-  ExecStatus LastVal::post(Home home, Int::IntView x0, int *s) {
+  ExecStatus LastVal::post(Home home, Int::IntView x0, std::shared_ptr<int> s) {
     if (x0.assigned()) {
       (*s) = x0.val();
     } else {

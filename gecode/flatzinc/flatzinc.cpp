@@ -797,6 +797,8 @@ namespace Gecode { namespace FlatZinc {
       int_uniform_ub = f.int_uniform_ub;
       int_sol_var.update(*this, f.int_sol_var);
       int_sol_orig.update(*this, f.int_sol_orig);
+      int_lastval_var.update(*this, f.int_lastval_var);
+      int_lastval_val = f.int_lastval_val;
 
       if (needAuxVars) {
         IntVarArgs iva;
@@ -2027,6 +2029,14 @@ namespace Gecode { namespace FlatZinc {
       if (restart_number.size() > 0) {
         rel(*this, restart_number[0], IRT_EQ, mi.restart());
         restart_number = IntVarArray(*this, 0);
+        ret = true;
+      }
+
+      if (int_lastval_var.size() > 0){
+        for (int i = 0; i < int_lastval_var.size(); ++i) {
+          rel(*this, int_lastval_var[i], IRT_EQ, *(int_lastval_val[i]));
+        }
+        int_lastval_var = IntVarArray(*this, 0);
         ret = true;
       }
 

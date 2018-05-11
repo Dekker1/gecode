@@ -488,13 +488,16 @@ namespace Gecode { namespace FlatZinc {
     Gecode::IntVarArray restart_status;
     /// restart_number() variable
     Gecode::IntVarArray restart_number;
-    /// int_rnd arguments
+    /// int_uniform arguments
     Gecode::IntVarArray int_uniform_var;
     int* int_uniform_lb;
     int* int_uniform_ub;
     /// int_sol arguments
     Gecode::IntVarArray int_sol_var;
     Gecode::IntVarArray int_sol_orig;
+    /// int_lastval arguments
+    Gecode::IntVarArray int_lastval_var;
+    std::shared_ptr<int>* int_lastval_val;
 
     /// Indicates whether an integer variable is introduced by mzn2fzn
     std::vector<bool> iv_introduced;
