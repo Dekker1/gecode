@@ -2017,11 +2017,11 @@ namespace Gecode { namespace FlatZinc {
       if (restart_status.size() > 0) {
         assert(restart_status.size() == 1);
         if (!mi.last()) {
-          rel(*this, restart_status[0], IRT_EQ, 1); // 1: UNKNOWN
+          rel(*this, restart_status[0], IRT_EQ, 1); // 1: START
         } else if (mi.solution() > 0) {
-          rel(*this, restart_status[0], IRT_EQ, 3); // 3: SAT
+          rel(*this, restart_status[0], IRT_EQ, 4); // 4: SAT
         } else {
-          rel(*this, restart_status[0], IRT_EQ, 2); // 3: UNSAT
+          rel(*this, restart_status[0], IRT_EQ, 2); // 2: UNKNOWN
         }
         restart_status = IntVarArray(*this, 0);
         ret = true;
