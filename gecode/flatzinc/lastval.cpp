@@ -40,7 +40,9 @@ namespace Gecode { namespace FlatZinc {
       : UnaryPropagator<IntView, PC_INT_VAL>(home,p), s(p.s) {}
 
   LastVal::LastVal(Home home, Int::IntView x0, std::shared_ptr<int> s)
-      : s(s), UnaryPropagator<IntView, PC_INT_VAL>(home, x0) {}
+      : s(s), UnaryPropagator<IntView, PC_INT_VAL>(home, x0) {
+    (*s) = x0.min();
+  }
 
   Actor* LastVal::copy(Space &home) {
     return new (home) LastVal(home,*this);
