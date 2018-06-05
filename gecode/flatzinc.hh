@@ -495,6 +495,11 @@ namespace Gecode { namespace FlatZinc {
     Gecode::IntVarArray int_lastval_var;
     std::shared_ptr<int>* int_lastval_val;
 
+    /// record fixed integers
+    static std::ofstream record;
+    Gecode::IntVarArray iv_copy;
+
+
     /// Indicates whether an integer variable is introduced by mzn2fzn
     std::vector<bool> iv_introduced;
     /// Indicates whether an integer variable aliases a Boolean variable

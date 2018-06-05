@@ -80,6 +80,7 @@ int main(int argc, char** argv) {
       } else {
         fg->run(std::cout, p, opt, t_total);
       }
+      fg->record.close();
     } else {
       exit(EXIT_FAILURE);
     }

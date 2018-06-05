@@ -787,6 +787,7 @@ namespace Gecode { namespace FlatZinc {
       _lnsInitialSolution = f._lnsInitialSolution;
       branchInfo = f.branchInfo;
       iv.update(*this, f.iv);
+      iv_copy.update(*this, f.iv_copy);
       iv_lns.update(*this, f.iv_lns);
       intVarCount = f.intVarCount;
 
@@ -1602,6 +1603,7 @@ namespace Gecode { namespace FlatZinc {
       }
     }
 
+    iv_copy = IntVarArray(iv);
   }
 
   AST::Array*
@@ -2009,6 +2011,8 @@ namespace Gecode { namespace FlatZinc {
     }
   }
 
+  std::ofstream FlatZincSpace::record = std::ofstream("record.txt");
+
   bool
   FlatZincSpace::slave(const MetaInfo& mi) {
     if (mi.type() == MetaInfo::RESTART) {
@@ -2055,6 +2059,21 @@ namespace Gecode { namespace FlatZinc {
       }
 
       if (ret) {
+        this->status();
+        for (int i = 0; i < iv_copy.size(); ++i) {
+          if (iv_copy[i].assigned()) {
+            record << iv_copy[i].val();
+          } else {
+            record << "_";
+          }
+          if (i < iv_copy.size()-1 ) {
+            record << ",";
+          } else {
+            record << std::endl;
+          }
+        }
+        record.flush();
+        iv_copy = IntVarArray(*this, 0);
         return false;
       }
     }
