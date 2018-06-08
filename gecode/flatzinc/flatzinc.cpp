@@ -787,6 +787,7 @@ namespace Gecode { namespace FlatZinc {
       _lnsInitialSolution = f._lnsInitialSolution;
       branchInfo = f.branchInfo;
       iv.update(*this, f.iv);
+      iv_copy.update(*this, f.iv_copy);
       iv_lns.update(*this, f.iv_lns);
       intVarCount = f.intVarCount;
 
@@ -1602,6 +1603,35 @@ namespace Gecode { namespace FlatZinc {
       }
     }
 
+    iv_copy = IntVarArray(iv);
+    while(record) {
+      std::string line;
+      std::getline(record, line);
+      if(record.eof()){
+        break;
+      }
+      std::istringstream ss = std::istringstream(line);
+      std::vector<int> row;
+      while(ss) {
+        char peek = ss.peek();
+        if (ss.eof()) {
+          break;
+        } else if(peek == ',') {
+          ss.get();
+        } else if (peek == '_') {
+          ss.get();
+          row.push_back(INT_MIN);
+        } else {
+          int i;
+          ss >> i;
+          row.push_back(i);
+        }
+      }
+      assert(row.size() == iv_copy.size());
+      vrecord.push_back(row);
+    }
+    record.close();
+    std::cout << "% Read " << vrecord.size() << " lines of neighbourhoods!\n";
   }
 
   AST::Array*
@@ -2009,54 +2039,22 @@ namespace Gecode { namespace FlatZinc {
     }
   }
 
+  std::ifstream FlatZincSpace::record = std::ifstream("record.txt");
+  std::vector<std::vector<int>> FlatZincSpace::vrecord = std::vector<std::vector<int>>();
+  size_t FlatZincSpace::record_i = 0;
+
   bool
   FlatZincSpace::slave(const MetaInfo& mi) {
     if (mi.type() == MetaInfo::RESTART) {
-      bool ret = false;
-      if (restart_status.size() > 0) {
-        assert(restart_status.size() == 1);
-        if (!mi.last()) {
-          rel(*this, restart_status[0], IRT_EQ, 1); // 1: START
-        } else if (mi.solution() > 0) {
-          rel(*this, restart_status[0], IRT_EQ, 4); // 4: SAT
-        } else {
-          rel(*this, restart_status[0], IRT_EQ, 2); // 2: UNKNOWN
+      for (int i = 0; i < iv_copy.size(); ++i) {
+        if (vrecord[record_i][i] > INT_MIN) {
+          rel(*this, iv_copy[i], IRT_EQ, vrecord[record_i][i]);
         }
-        restart_status = IntVarArray(*this, 0);
-        ret = true;
       }
+      record_i++;
 
-      if (int_lastval_var.size() > 0){
-        for (int i = 0; i < int_lastval_var.size(); ++i) {
-          rel(*this, int_lastval_var[i], IRT_EQ, *(int_lastval_val[i]));
-        }
-        int_lastval_var = IntVarArray(*this, 0);
-        ret = true;
-      }
-
-      if (int_uniform_var.size() > 0){
-        for (int i = 0; i < int_uniform_var.size(); ++i) {
-          rel(*this, int_uniform_var[i], IRT_EQ,
-              int_uniform_lb[i] + _random(static_cast<unsigned int>(int_uniform_ub[i] - int_uniform_lb[i]))
-          );
-        }
-        int_uniform_var = IntVarArray(*this, 0);
-        ret = true;
-      }
-
-      if (int_sol_var.size() > 0 && mi.last()) {
-        assert(int_sol_var.size() == int_sol_orig.size());
-        const FlatZincSpace& last = static_cast<const FlatZincSpace&>(*mi.last());
-        for (int i = 0; i < int_sol_var.size(); ++i) {
-          rel(*this, int_sol_var[i], IRT_EQ, last.int_sol_orig[i].val());
-        }
-        int_sol_var = IntVarArray(*this, 0);
-        ret = true;
-      }
-
-      if (ret) {
-        return false;
-      }
+      iv_copy = IntVarArray(*this, 0);
+      return false;
     }
 
     if ((mi.type() == MetaInfo::RESTART) && (mi.restart() != 0) &&
