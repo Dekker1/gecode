@@ -787,7 +787,7 @@ namespace Gecode { namespace FlatZinc {
       _lnsInitialSolution = f._lnsInitialSolution;
       branchInfo = f.branchInfo;
       iv.update(*this, f.iv);
-      iv_copy.update(*this, f.iv_copy);
+      main_vars.update(*this, f.main_vars);
       iv_lns.update(*this, f.iv_lns);
       intVarCount = f.intVarCount;
 
@@ -1090,6 +1090,7 @@ namespace Gecode { namespace FlatZinc {
     for (unsigned int i=fv.size(); i--;)
       fv_searched[i] = false;
 #endif
+    bool can_record = false;
 
     _lns = 0;
     if (ann) {
@@ -1107,6 +1108,21 @@ namespace Gecode { namespace FlatZinc {
           AST::Array* args = call->getArgs(2);
           opt.restart_base(args->a[0]->getFloat());
           opt.restart_scale(args->a[1]->getInt());
+        } else if (flatAnn[i]->isCall("main_vars")) {
+          AST::Call* call = flatAnn[i]->getCall("main_vars");
+          AST::Array* vars = call->args->getArray();
+          int k=vars->a.size();
+          for (int j=vars->a.size(); j--;)
+            if (vars->a[j]->isInt())
+              k--;
+          main_vars = IntVarArray(*this, k);
+          k = 0;
+          for (unsigned int j=0; j<vars->a.size(); j++) {
+            if (vars->a[j]->isInt())
+              continue;
+            main_vars[k++] = iv[vars->a[j]->getIntVar()];
+          }
+          can_record=true;
         } else if (flatAnn[i]->isCall("restart_luby")) {
           AST::Call* call = flatAnn[i]->getCall("restart_luby");
           opt.restart(RM_LUBY);
@@ -1602,8 +1618,10 @@ namespace Gecode { namespace FlatZinc {
 #endif
       }
     }
-
-    iv_copy = IntVarArray(iv);
+    if (!can_record) {
+      std::cerr << "No variables found to record" << std::endl;
+      exit(1);
+    }
   }
 
   AST::Array*
@@ -2060,20 +2078,20 @@ namespace Gecode { namespace FlatZinc {
 
       if (ret) {
         this->status();
-        for (int i = 0; i < iv_copy.size(); ++i) {
-          if (iv_copy[i].assigned()) {
-            record << iv_copy[i].val();
+        for (int i = 0; i < main_vars.size(); ++i) {
+          if (main_vars[i].assigned()) {
+            record << main_vars[i].val();
           } else {
             record << "_";
           }
-          if (i < iv_copy.size()-1 ) {
+          if (i < main_vars.size()-1 ) {
             record << ",";
           } else {
             record << std::endl;
           }
         }
         record.flush();
-        iv_copy = IntVarArray(*this, 0);
+        main_vars = IntVarArray(*this, 0);
         return false;
       }
     }

@@ -497,7 +497,7 @@ namespace Gecode { namespace FlatZinc {
 
     /// record fixed integers
     static std::ofstream record;
-    Gecode::IntVarArray iv_copy;
+    Gecode::IntVarArray main_vars;
 
 
     /// Indicates whether an integer variable is introduced by mzn2fzn
