@@ -787,7 +787,7 @@ namespace Gecode { namespace FlatZinc {
       _lnsInitialSolution = f._lnsInitialSolution;
       branchInfo = f.branchInfo;
       iv.update(*this, f.iv);
-      iv_copy.update(*this, f.iv_copy);
+      main_vars.update(*this, f.main_vars);
       iv_lns.update(*this, f.iv_lns);
       intVarCount = f.intVarCount;
 
@@ -1091,6 +1091,7 @@ namespace Gecode { namespace FlatZinc {
       fv_searched[i] = false;
 #endif
 
+    bool can_replay;
     _lns = 0;
     if (ann) {
       std::vector<AST::Node*> flatAnn;
@@ -1107,6 +1108,21 @@ namespace Gecode { namespace FlatZinc {
           AST::Array* args = call->getArgs(2);
           opt.restart_base(args->a[0]->getFloat());
           opt.restart_scale(args->a[1]->getInt());
+        } else if (flatAnn[i]->isCall("main_vars")) {
+          AST::Call* call = flatAnn[i]->getCall("main_vars");
+          AST::Array* vars = call->args->getArray();
+          int k=vars->a.size();
+          for (int j=vars->a.size(); j--;)
+            if (vars->a[j]->isInt())
+              k--;
+          main_vars = IntVarArray(*this, k);
+          k = 0;
+          for (unsigned int j=0; j<vars->a.size(); j++) {
+            if (vars->a[j]->isInt())
+              continue;
+            main_vars[k++] = iv[vars->a[j]->getIntVar()];
+          }
+          can_replay=true;
         } else if (flatAnn[i]->isCall("restart_luby")) {
           AST::Call* call = flatAnn[i]->getCall("restart_luby");
           opt.restart(RM_LUBY);
@@ -1610,7 +1626,11 @@ namespace Gecode { namespace FlatZinc {
     int_sol_orig = IntVarArray(*this, 0);
     int_lastval_var = IntVarArray(*this, 0);
 
-    iv_copy = IntVarArray(iv);
+
+    if (!can_replay) {
+      std::cerr << "No variables found to replay to" << std::endl;
+      exit(1);
+    }
     while(record) {
       std::string line;
       std::getline(record, line);
@@ -1634,7 +1654,10 @@ namespace Gecode { namespace FlatZinc {
           row.push_back(i);
         }
       }
-      assert(row.size() == iv_copy.size());
+      if(row.size() != main_vars.size()) {
+        std::cerr << "Invalid record" << std::endl;
+        exit(1);
+      }
       vrecord.push_back(row);
     }
     record.close();
@@ -2053,14 +2076,14 @@ namespace Gecode { namespace FlatZinc {
   bool
   FlatZincSpace::slave(const MetaInfo& mi) {
     if (mi.type() == MetaInfo::RESTART) {
-      for (int i = 0; i < iv_copy.size(); ++i) {
+      for (int i = 0; i < main_vars.size(); ++i) {
         if (vrecord[record_i][i] > INT_MIN) {
-          rel(*this, iv_copy[i], IRT_EQ, vrecord[record_i][i]);
+          rel(*this, main_vars[i], IRT_EQ, vrecord[record_i][i]);
         }
       }
       record_i++;
 
-      iv_copy = IntVarArray(*this, 0);
+      main_vars = IntVarArray(*this, 0);
       return false;
     }
 

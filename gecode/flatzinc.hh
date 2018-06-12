@@ -497,7 +497,7 @@ namespace Gecode { namespace FlatZinc {
 
     /// record fixed integers
     static std::ifstream record;
-    Gecode::IntVarArray iv_copy;
+    Gecode::IntVarArray main_vars;
     static std::vector<std::vector<int>> vrecord;
     static size_t record_i;
 
