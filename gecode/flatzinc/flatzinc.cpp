@@ -791,7 +791,6 @@ namespace Gecode { namespace FlatZinc {
       intVarCount = f.intVarCount;
 
       restart_status.update(*this, f.restart_status);
-      restart_number.update(*this, f.restart_number);
       int_uniform_var.update(*this, f.int_uniform_var);
       int_uniform_lb = f.int_uniform_lb;
       int_uniform_ub = f.int_uniform_ub;
@@ -2024,11 +2023,6 @@ namespace Gecode { namespace FlatZinc {
           rel(*this, restart_status[0], IRT_EQ, 2); // 2: UNKNOWN
         }
         restart_status = IntVarArray(*this, 0);
-        ret = true;
-      }
-      if (restart_number.size() > 0) {
-        rel(*this, restart_number[0], IRT_EQ, mi.restart());
-        restart_number = IntVarArray(*this, 0);
         ret = true;
       }
 

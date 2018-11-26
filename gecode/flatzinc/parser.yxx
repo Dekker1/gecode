@@ -321,10 +321,6 @@ void initfg(ParserState* pp) {
     pp->fg->restart_status = IntVarArray(*(pp->fg), 1);
     pp->fg->restart_status[0] = pp->fg->iv[pp->status_idx];
   }
-  if (pp->restart_number_idx >= 0) {
-    pp->fg->restart_number = IntVarArray(*(pp->fg), 1);
-    pp->fg->restart_number[0] = pp->fg->iv[pp->restart_number_idx];
-  }
   if (!(pp->int_uniform.empty())) {
     pp->fg->int_uniform_var = IntVarArray(*(pp->fg), pp->int_uniform.size());
     pp->fg->int_uniform_lb = new int[pp->int_uniform.size()];
@@ -1467,8 +1463,6 @@ constraint_item :
           std::string cid($2);
           if (cid=="status" && $4->a[0]->isIntVar()) {
             pp->status_idx = $4->a[0]->getIntVar();
-          } else if (cid=="restart_number" && $4->a[0]->isIntVar()) {
-              pp->restart_number_idx = $4->a[0]->getIntVar();
           } else if (cid=="int_lastval" && $4->a[0]->isIntVar() && $4->a[1]->isIntVar()) {
             int base0 = getBaseIntVar(pp,$4->a[0]->getIntVar());
             int base1 = getBaseIntVar(pp,$4->a[1]->getIntVar());

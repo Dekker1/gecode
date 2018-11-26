@@ -213,7 +213,6 @@ namespace Gecode { namespace FlatZinc {
     std::vector<ConExpr*> domainConstraints;
 
     int status_idx = -1;
-    int restart_number_idx = -1;
     std::vector<std::array<int, 3>> int_uniform;
     std::vector<std::array<int, 2>> int_sol;
     std::vector<std::array<int, 2>> int_lastval;
