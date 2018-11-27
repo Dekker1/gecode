@@ -89,6 +89,7 @@
 #include <gecode/flatzinc/ast.hh>
 #include <gecode/flatzinc/varspec.hh>
 #include <array>
+#include <memory>
 
 /**
  * \namespace Gecode::FlatZinc

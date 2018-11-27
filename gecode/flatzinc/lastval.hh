@@ -35,6 +35,7 @@
 #define __FLATZINC_LASTVAL_HH__
 
 #include <gecode/int.hh>
+#include <memory>
 using namespace Gecode::Int;
 
 namespace Gecode { namespace FlatZinc {
