@@ -1603,6 +1603,13 @@ namespace Gecode { namespace FlatZinc {
       }
     }
 
+    // Remove unnecessary variable arrays
+    restart_status = IntVarArray(*this, 0);
+    int_uniform_var = IntVarArray(*this, 0);
+    int_sol_var = IntVarArray(*this, 0);
+    int_sol_orig = IntVarArray(*this, 0);
+    int_lastval_var = IntVarArray(*this, 0);
+
     iv_copy = IntVarArray(iv);
     while(record) {
       std::string line;
