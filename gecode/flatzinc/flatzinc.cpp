@@ -790,6 +790,7 @@ namespace Gecode { namespace FlatZinc {
       iv_lns.update(*this, f.iv_lns);
       intVarCount = f.intVarCount;
 
+      restart_complete.update(*this, f.restart_complete);
       restart_status.update(*this, f.restart_status);
       int_uniform_var.update(*this, f.int_uniform_var);
       int_uniform_lb = f.int_uniform_lb;
@@ -2012,6 +2013,17 @@ namespace Gecode { namespace FlatZinc {
   bool
   FlatZincSpace::slave(const MetaInfo& mi) {
     if (mi.type() == MetaInfo::RESTART) {
+			if (restart_complete.size() > 0) {
+				assert(restart_complete.size() == 1);
+				assert(complete_marker != nullptr);
+				if (*complete_marker) {
+					// Fail the space
+					this->fail();
+					// Return true to signal we are in the global search space
+					return true;
+				}
+			}
+
       bool ret = false;
       if (restart_status.size() > 0) {
         assert(restart_status.size() == 1);
