@@ -40,6 +40,7 @@
 #include <gecode/flatzinc.hh>
 #include <gecode/flatzinc/parser.hh>
 #include <gecode/flatzinc/lastval.hh>
+#include <gecode/flatzinc/complete.hh>
 #include <iostream>
 #include <fstream>
 
@@ -320,6 +321,12 @@ void initfg(ParserState* pp) {
   if (pp->status_idx >= 0) {
     pp->fg->restart_status = IntVarArray(*(pp->fg), 1);
     pp->fg->restart_status[0] = pp->fg->iv[pp->status_idx];
+  }
+  if (pp->complete_idx >= 0) {
+    pp->fg->restart_complete = BoolVarArray(*(pp->fg), 1);
+    pp->fg->restart_complete[0] = pp->fg->bv[pp->complete_idx];
+    pp->fg->complete_marker = std::make_shared<bool>(false);
+		Complete::post(*(pp->fg), pp->fg->restart_complete[0], pp->fg->complete_marker);
   }
   if (!(pp->int_uniform.empty())) {
     pp->fg->int_uniform_var = IntVarArray(*(pp->fg), pp->int_uniform.size());
@@ -1463,6 +1470,8 @@ constraint_item :
           std::string cid($2);
           if (cid=="status" && $4->a[0]->isIntVar()) {
             pp->status_idx = $4->a[0]->getIntVar();
+          } else if (cid=="complete_reif" && $4->a[0]->isBoolVar()) {
+            pp->complete_idx = $4->a[0]->getBoolVar();
           } else if (cid=="int_lastval" && $4->a[0]->isIntVar() && $4->a[1]->isIntVar()) {
             int base0 = getBaseIntVar(pp,$4->a[0]->getIntVar());
             int base1 = getBaseIntVar(pp,$4->a[1]->getIntVar());

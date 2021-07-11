@@ -485,6 +485,9 @@ namespace Gecode { namespace FlatZinc {
     /// The integer variables used in LNS
     Gecode::IntVarArray iv_lns;
 
+    /// Complete() variable
+    Gecode::BoolVarArray restart_complete;
+		std::shared_ptr<bool> complete_marker;
     /// Status() variable
     Gecode::IntVarArray restart_status;
     /// int_uniform arguments
