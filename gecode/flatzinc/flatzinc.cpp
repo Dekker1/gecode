@@ -2027,13 +2027,23 @@ namespace Gecode { namespace FlatZinc {
       bool ret = false;
       if (restart_status.size() > 0) {
         assert(restart_status.size() == 1);
-        if (!mi.last()) {
-          rel(*this, restart_status[0], IRT_EQ, 1); // 1: START
-        } else if (mi.solution() > 0) {
-          rel(*this, restart_status[0], IRT_EQ, 4); // 4: SAT
-        } else {
-          rel(*this, restart_status[0], IRT_EQ, 2); // 2: UNKNOWN
-        }
+				switch(mi.reason()) {
+					case MetaInfo::RR_INIT:
+						assert(!mi.last());
+						rel(*this, restart_status[0], IRT_EQ, 1); // 1: START
+						break;
+					case MetaInfo::RR_SOL:
+						assert(mi.solution() > 0);
+						rel(*this, restart_status[0], IRT_EQ, 4); // 4: SAT
+						break;
+					case MetaInfo::RR_CMPL:
+						rel(*this, restart_status[0], IRT_EQ, 3); // 3: UNSAT
+						break;
+					default:
+						assert(mi.reason() == MetaInfo::RR_LIM);
+						rel(*this, restart_status[0], IRT_EQ, 2); // 2: UNKNOWN
+						break;
+				}
         restart_status = IntVarArray(*this, 0);
         ret = true;
       }
