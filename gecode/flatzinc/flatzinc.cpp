@@ -791,6 +791,7 @@ namespace Gecode { namespace FlatZinc {
       intVarCount = f.intVarCount;
 
       restart_complete.update(*this, f.restart_complete);
+      complete_marker = f.complete_marker;
       restart_status.update(*this, f.restart_status);
       int_uniform_var.update(*this, f.int_uniform_var);
       int_uniform_lb = f.int_uniform_lb;
