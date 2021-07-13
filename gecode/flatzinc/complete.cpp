@@ -53,7 +53,7 @@ namespace Gecode { namespace FlatZinc {
   ExecStatus Complete::propagate(Space &home, const ModEventDelta &med) {
     assert(x0.assigned());
     (*c) = x0.val();
-		return ES_FAILED;
+    return home.ES_SUBSUMED(*this);
   }
 
   ExecStatus Complete::post(Home home, BoolView x0, std::shared_ptr<bool> c) {
