@@ -47,6 +47,7 @@
 #include <gecode/float.hh>
 #endif
 #include <gecode/flatzinc.hh>
+#include <gecode/flatzinc/blackbox.hh>
 
 namespace Gecode { namespace FlatZinc {
 
@@ -1652,6 +1653,29 @@ namespace Gecode { namespace FlatZinc {
       member(s,x,y,s.arg2BoolVar(ce[2]),s.ann2ipl(ann));
     }
 
+    void p_blackbox(FlatZincSpace& s, const ConExpr& ce, AST::Node* ann) {
+      IntVarArgs input = s.arg2intvarargs(ce[0]);
+      IntVarArgs out = s.arg2intvarargs(ce[1]);
+      std::string dll_path;
+      if (ann != nullptr && ann->isArray()) {
+        AST::Array* anns = ann->getArray();
+        const std::vector<AST::Node*>& a = anns->a;
+        for (size_t i = 0; i < a.size(); i++) {
+          if (a[i]->isCall("dll_path")) {
+            AST::Call* c = a[i]->getCall("dll_path");
+            dll_path = c->args->getString();
+          }
+        }
+      }
+      if (dll_path.empty()) {
+        throw FlatZinc::Error("Registry", std::string("Please supply dll file via ::dll_path(dll_file_path)"));
+      }
+      if (access(dll_path.c_str(), F_OK) == -1) {
+        throw FlatZinc::Error("Registry", std::string("dll file path invalid"));
+      }
+      FlatZinc::blackbox(s, input, out, dll_path);
+    }
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -1839,6 +1863,8 @@ namespace Gecode { namespace FlatZinc {
         registry().add("gecode_member_int_reif",&p_member_int_reif);
         registry().add("member_bool",&p_member_bool);
         registry().add("gecode_member_bool_reif",&p_member_bool_reif);
+
+        registry().add("black_box", &p_blackbox);
       }
     };
     IntPoster __int_poster;
