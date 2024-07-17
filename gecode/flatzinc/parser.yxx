@@ -399,7 +399,7 @@ void initfg(ParserState* pp) {
       pp->fg->restart_data.init();
       pp->fg->on_restart_sv = SetVarArray(*(pp->fg), sv_size);
       int base = 0;
-      
+
       pp->fg->restart_data().on_restart_sv_sol = pp->sol_set.size();
       for (size_t i = 0; i < pp->sol_set.size(); ++i) {
         pp->fg->on_restart_sv[base + i] = pp->fg->sv[(pp->sol_set[i][0])];
@@ -436,7 +436,7 @@ void initfg(ParserState* pp) {
         pp->fg->on_restart_fv[base + pp->sol_float.size() + i] = pp->fg->fv[(pp->sol_float[i][1])];
       }
       base += pp->sol_float.size() * 2;
-      
+
       pp->fg->restart_data().last_val_float = std::vector<FloatVal>(pp->last_val_float.size());
       FloatVarArgs last_val_args;
       for (size_t i = 0; i < pp->last_val_float.size(); ++i) {
@@ -768,6 +768,7 @@ pred_arg_simple_type:
       { if ($3()) delete $3.some(); }
     | FZ_BOOL
     | FZ_FLOAT
+    | FZ_STRING
 
 pred_array_init:
       pred_array_init_arg
@@ -1882,6 +1883,8 @@ non_array_expr :
       { $$ = new AST::FloatLit($1); }
     | set_literal
       { $$ = $1; }
+    | FZ_STRING_LIT
+      { $$ = new AST::String($1); }
     | var_par_id /* variable, possibly array */
       {
         ParserState* pp = static_cast<ParserState*>(parm);

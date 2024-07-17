@@ -31,15 +31,25 @@
  *
  */
 
+#ifndef __FLATZINC_BLACKBOX_HH__
+#define __FLATZINC_BLACKBOX_HH__
+
 #include <cstddef>
-#include <dlfcn.h>
 #include <string>
-#include <type_traits>
 
 #include <gecode/flatzinc.hh>
 #include <gecode/kernel.hh>
 #ifdef GECODE_HAS_FLOAT_VARS
 #include <gecode/float.hh>
+#endif
+
+#ifdef _WIN32
+#define NOMINMAX // Ensure the words min/max remain available
+#include <Windows.h>
+#else
+#include <dlfcn.h>
+// NOLINTNEXTLINE(bugprone-reserved-identifier)
+#define __stdcall
 #endif
 
 namespace Gecode {
@@ -56,42 +66,70 @@ public:
 /// Implementation of a black box function that dynamically loads a library and
 /// run a contained function.
 class BlackBoxDLL : public BlackBoxFn {
-  using FunctionSymbol =
-      std::add_pointer<void(const int *, size_t, const double *, size_t, int *,
-                            size_t, double *, size_t)>::type;
-
 public:
   BlackBoxDLL(const std::string &name) {
-    _library = dlopen(name.c_str(), RTLD_LAZY);
-    if (!_library) {
-      throw FlatZinc::Error("Blackbox", "Unable to open dynamic library: " +
-                                            std::string(dlerror()));
+    std::string loadError;
+#ifdef _WIN32
+    library = LoadLibrary(name.c_str());
+    if (!library) {
+      loadError = std::string("unable to locate library `") + name + "'";
+      library = LoadLibrary((std::string(name) + ".dll").c_str());
+    }
+    if (!library) {
+      library = LoadLibrary((std::string("lib") + name + ".dll").c_str());
+    }
+#else
+    library = dlopen(name.c_str(), RTLD_LAZY);
+    if (!library) {
+      loadError = std::string(dlerror());
+      library = dlopen((name + ".so").c_str(), RTLD_NOW);
+    }
+    if (!library) {
+      library = dlopen((std::string("lib") + name + ".so").c_str(), RTLD_NOW);
+    }
+#endif
+    if (!library) {
+      throw Error("Blackbox", "Unable to open dynamic library: " + loadError);
     }
 
-    // load create function
-    _fn_symbol = (BlackBoxDLL::FunctionSymbol)dlsym(_library, "fzn_blackbox");
-    if (!_fn_symbol) {
-      throw FlatZinc::Error(
-          "Blackbox",
-          "Unable to find funcion `fzn_blackbox` in dynamic library: " +
-              std::string(dlerror()));
+    // find symbol for blacbox function
+#ifdef _WIN32
+    *(void **)(&dll_fzn_blackbox) =
+        GetProcAddress((HMODULE)library, "fzn_blackbox");
+    std::string symError = ".";
+#else
+    *(void **)(&dll_fzn_blackbox) = dlsym(library, "fzn_blackbox");
+    std::string symError(": ");
+    if (!dll_fzn_blackbox) {
+      symError += std::string(dlerror());
+    }
+#endif
+    if (!dll_fzn_blackbox) {
+      throw Error("Blackbox",
+                  "Unable to find symbol `fzn_blackbox` in dynamic library" +
+                      symError);
     }
   }
   ~BlackBoxDLL() {
-    if (_library) {
-      dlclose(_library);
+    if (library) {
+#ifdef _WIN32
+      FreeLibrary((HMODULE)library);
+#else
+      dlclose(library);
+#endif
     }
   }
   void run(const int *int_in, size_t int_in_len, const double *float_in,
            size_t float_in_len, int *int_out, size_t int_out_len,
            double *float_out, size_t float_out_len) override {
-    (*_fn_symbol)(int_in, int_in_len, float_in, float_in_len, int_out,
-                  int_out_len, float_out, float_out_len);
+    dll_fzn_blackbox(int_in, int_in_len, float_in, float_in_len, int_out,
+                     int_out_len, float_out, float_out_len);
   }
 
 private:
-  FunctionSymbol _fn_symbol;
-  void *_library;
+  void *library;
+  void(__stdcall *dll_fzn_blackbox)(const int *, size_t, const double *, size_t,
+                                    int *, size_t, double *, size_t);
 };
 
 /// Implementation of a black function that starts a seperate process to
@@ -245,20 +283,28 @@ public:
 #endif
                          const std::string &mode,
                          const std::string &instantiation) {
+    BlackBoxFn *black_box(nullptr);
+    if (mode == "dll") {
+      black_box = new BlackBoxDLL(instantiation);
+    } else {
+      throw Error("Blackbox", "Unknown blackbox protocol `" + mode + "'");
+    }
+
     new (home) BlackBox(home, int_input, int_output,
 #ifdef GECODE_HAS_FLOAT_VARS
                         float_input, float_output,
 #endif
-                        nullptr);
+                        black_box);
     return ES_OK;
   }
 };
 
-void blackbox(Home home, const IntVarArgs &int_in, const IntVarArgs &int_out,
+inline void
+blackbox(Home home, const IntVarArgs &int_in, const IntVarArgs &int_out,
 #ifdef GECODE_HAS_FLOAT_VARS
-              const FloatVarArgs &float_in, const FloatVarArgs &float_out,
+         const FloatVarArgs &float_in, const FloatVarArgs &float_out,
 #endif
-              const std::string &mode, const std::string &instantiation) {
+         const std::string &mode, const std::string &instantiation) {
   ViewArray<Int::IntView> int_input(home, int_in);
   ViewArray<Int::IntView> int_output(home, int_out);
 #ifdef GECODE_HAS_FLOAT_VARS
@@ -269,12 +315,15 @@ void blackbox(Home home, const IntVarArgs &int_in, const IntVarArgs &int_out,
   if (home.failed())
     return;
   PostInfo pi(home);
-  GECODE_ES_FAIL(Gecode::FlatZinc::BlackBox::post(home, int_input, int_output,
+  ExecStatus es = BlackBox::post(home, int_input, int_output,
 #ifdef GECODE_HAS_FLOAT_VARS
-                                                  float_input, float_output,
+                                 float_input, float_output,
 #endif
-                                                  mode, instantiation));
+                                 mode, instantiation);
+  GECODE_ES_FAIL(es);
 }
 
 } // namespace FlatZinc
 } // namespace Gecode
+
+#endif //__FLATZINC_BLACKBOX_HH__

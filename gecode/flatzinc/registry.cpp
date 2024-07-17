@@ -1862,7 +1862,7 @@ float_input, float_output,
         registry().add("member_bool",&p_member_bool);
         registry().add("gecode_member_bool_reif",&p_member_bool_reif);
 
-        registry().add("black_box", &p_blackbox);
+        registry().add("gecode_blackbox", &p_blackbox);
       }
     };
     IntPoster __int_poster;
