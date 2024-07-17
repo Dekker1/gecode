@@ -1654,26 +1654,24 @@ namespace Gecode { namespace FlatZinc {
     }
 
     void p_blackbox(FlatZincSpace& s, const ConExpr& ce, AST::Node* ann) {
-      IntVarArgs input = s.arg2intvarargs(ce[0]);
-      IntVarArgs out = s.arg2intvarargs(ce[1]);
-      std::string dll_path;
-      if (ann != nullptr && ann->isArray()) {
-        AST::Array* anns = ann->getArray();
-        const std::vector<AST::Node*>& a = anns->a;
-        for (size_t i = 0; i < a.size(); i++) {
-          if (a[i]->isCall("dll_path")) {
-            AST::Call* c = a[i]->getCall("dll_path");
-            dll_path = c->args->getString();
-          }
-        }
+      std::string mode = ce[0]->getString();
+      std::string instantiation = ce[1]->getString();
+      IntVarArgs int_input = s.arg2intvarargs(ce[2]);
+      IntVarArgs int_output = s.arg2intvarargs(ce[4]);
+#ifdef GECODE_HAS_FLOAT_VARS
+      FloatVarArgs float_input = s.arg2floatvarargs(ce[3]);
+      FloatVarArgs float_output = s.arg2floatvarargs(ce[5]);
+#else
+      if (!ce[3]->getArray()->a.empty() || !ce[5]->getArray()->a.empty()) {
+        throw FlatZinc::Error("Registry",
+        "Blackbox propagator cannot use floating point values when Gecode is compiled without floating point decision variable support.");
       }
-      if (dll_path.empty()) {
-        throw FlatZinc::Error("Registry", std::string("Please supply dll file via ::dll_path(dll_file_path)"));
-      }
-      if (access(dll_path.c_str(), F_OK) == -1) {
-        throw FlatZinc::Error("Registry", std::string("dll file path invalid"));
-      }
-      FlatZinc::blackbox(s, input, out, dll_path);
+#endif
+      FlatZinc::blackbox(s, int_input, int_output,
+#ifdef GECODE_HAS_FLOAT_VARS
+float_input, float_output,
+#endif
+      mode, instantiation);
     }
 
     class IntPoster {
