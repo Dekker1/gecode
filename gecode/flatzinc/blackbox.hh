@@ -94,7 +94,7 @@ public:
 protected:
 #ifdef _WIN32
   HANDLE pipe_send;
-  HANDLE pipe_read;
+  HANDLE pipe_receive;
 #else
   int pipe_send;
   int pipe_receive;

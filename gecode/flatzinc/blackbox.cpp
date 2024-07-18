@@ -127,22 +127,23 @@ BlackBoxExec::BlackBoxExec(const std::string &program) {
     std::cerr << "Stdin SetHandleInformation" << std::endl;
 
   PROCESS_INFORMATION piProcInfo;
-  STARTUPINFOW siStartInfo;
+  STARTUPINFO siStartInfo;
 
   // Set up members of the PROCESS_INFORMATION structure.
   ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
 
   // Set up members of the STARTUPINFO structure.
   // This structure specifies the STDIN and STDOUT handles for redirection.
-  ZeroMemory(&siStartInfo, sizeof(STARTUPINFOW));
-  siStartInfo.cb = sizeof(STARTUPINFOW);
+  ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
+  siStartInfo.cb = sizeof(STARTUPINFO);
   siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
   siStartInfo.hStdInput = g_hChildStd_IN_Rd;
   siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
+  std::string prog = program;
   BOOL processStarted =
       CreateProcess(nullptr,
-                    program.c_str(), // command line
+                    prog.data(),     // command line
                     nullptr,         // process security attributes
                     nullptr,         // primary thread security attributes
                     TRUE,            // handles are inherited
