@@ -50,13 +50,13 @@ namespace FlatZinc {
 BlackBoxDLL::BlackBoxDLL(const std::string &name) {
   std::string loadError;
 #ifdef _WIN32
-  library = LoadLibrary(name.c_str());
+  library = LoadLibraryA(name.c_str());
   if (!library) {
     loadError = std::string("unable to locate library `") + name + "'";
-    library = LoadLibrary((std::string(name) + ".dll").c_str());
+    library = LoadLibraryA((std::string(name) + ".dll").c_str());
   }
   if (!library) {
-    library = LoadLibrary((std::string("lib") + name + ".dll").c_str());
+    library = LoadLibraryA((std::string("lib") + name + ".dll").c_str());
   }
 #else
   library = dlopen(name.c_str(), RTLD_LAZY);
@@ -128,22 +128,22 @@ BlackBoxExec::BlackBoxExec(const std::string &program) {
     std::cerr << "Stdin SetHandleInformation" << std::endl;
 
   PROCESS_INFORMATION piProcInfo;
-  STARTUPINFO siStartInfo;
+  STARTUPINFOA siStartInfo;
 
   // Set up members of the PROCESS_INFORMATION structure.
   ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
 
   // Set up members of the STARTUPINFO structure.
   // This structure specifies the STDIN and STDOUT handles for redirection.
-  ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
-  siStartInfo.cb = sizeof(STARTUPINFO);
+  ZeroMemory(&siStartInfo, sizeof(STARTUPINFOA));
+  siStartInfo.cb = sizeof(STARTUPINFOA);
   siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
   siStartInfo.hStdInput = g_hChildStd_IN_Rd;
   siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
   std::string prog = program;
   BOOL processStarted =
-      CreateProcess(nullptr,
+      CreateProcessA(nullptr,
                     prog.data(),     // command line
                     nullptr,         // process security attributes
                     nullptr,         // primary thread security attributes
