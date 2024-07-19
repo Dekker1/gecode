@@ -39,6 +39,7 @@
 #include <string>
 
 #ifndef _WIN32
+#include <cstdlib>
 #include <dlfcn.h>
 #include <unistd.h>
 #endif
@@ -188,10 +189,8 @@ BlackBoxExec::BlackBoxExec(const std::string &program) {
   close(child_in[WRITE]);
   close(child_out[READ]);
 
-  int status = execlp(program.c_str(), program.c_str(),
-                      (char *)nullptr); // execlp only returns if an error
-  assert(status == -1);
-  throw Error("BlackBoxExec", "Unable to start program `" + program + "'");
+  int status = std::system(program.c_str());
+  std::exit(status);
 #endif
 };
 
