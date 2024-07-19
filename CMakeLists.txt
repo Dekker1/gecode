@@ -362,7 +362,7 @@ target_link_libraries(gecodeset gecodeint)
 target_link_libraries(gecodefloat gecodeint)
 target_link_libraries(gecodeminimodel gecodeint gecodeset gecodesearch)
 target_link_libraries(gecodedriver gecodeint)
-target_link_libraries(gecodeflatzinc gecodeminimodel gecodedriver)
+target_link_libraries(gecodeflatzinc gecodeminimodel gecodedriver ${CMAKE_DL_LIBS})
 
 if (GECODE_HAS_QT)
   if (Qt6_FOUND)
@@ -428,7 +428,7 @@ endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-option(BUILD_EXAMPLES "Build examples." OFF) 
+option(BUILD_EXAMPLES "Build examples." OFF)
 if (${BUILD_EXAMPLES})
   add_subdirectory(examples)
 endif()
