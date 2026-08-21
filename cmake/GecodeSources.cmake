@@ -244,6 +244,11 @@ set(GECODE_FLATZINC_SOURCES
   gecode/flatzinc/registry.cpp
 )
 
+set(GECODE_FZNSO_SOURCES
+  gecode/flatzinc/fznso.cpp
+  gecode/flatzinc/fznso-signatures.cpp
+)
+
 set(GECODE_TEST_SOURCES
   test/afc.cpp
   test/array.cpp

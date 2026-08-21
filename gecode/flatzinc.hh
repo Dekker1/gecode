@@ -641,6 +641,18 @@ namespace Gecode { namespace FlatZinc {
      */
     void shrinkArrays(Printer& p);
 
+    /**
+     * \brief Restore what a clone needs before more model can be posted into it
+     *
+     * The copy constructor deliberately drops everything only model
+     * construction uses — the posting data, the Boolean aliases and the
+     * introduced-variable flags — because a search makes millions of clones and
+     * none of them post anything. A clone that *is* going to be extended, as
+     * when an incremental interface keeps one space per layer, calls this with
+     * the space it was cloned from to get that state back.
+     */
+    void reopen(const FlatZincSpace& from);
+
     /// Return whether to solve a satisfaction or optimization problem
     Meth method(void) const;
 

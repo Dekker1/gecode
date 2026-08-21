@@ -73,6 +73,16 @@ namespace Gecode { namespace FlatZinc {
     r["fzn_" + id] = p;
   }
 
+  std::vector<std::string>
+  Registry::identifiers(void) const {
+    std::vector<std::string> ids;
+    ids.reserve(r.size());
+    for (std::map<std::string,poster>::const_iterator i = r.begin();
+         i != r.end(); ++i)
+      ids.push_back(i->first);
+    return ids;
+  }
+
   namespace {
 
     void p_distinct(FlatZincSpace& s, const ConExpr& ce, AST::Node* ann) {
@@ -1213,6 +1223,18 @@ namespace Gecode { namespace FlatZinc {
                 ce[6]->getSet(), ann);
     }
 
+    /// As p_regular_set, but the alphabet arrives as a count and the number its
+    /// symbols start from rather than as a lowest and a highest symbol. That is
+    /// the FZnSO registry's shape: the count is also the transition table's row
+    /// length.
+    void p_regular_offset(FlatZincSpace& s, const ConExpr& ce, AST::Node* ann) {
+      int symbols = ce[2]->getInt();
+      int symbols_min = ce[3]->getInt();
+      p_regular(s, s.arg2intvarargs(ce[0]), ce[1]->getInt(), symbols_min,
+                symbols_min + symbols - 1, s.arg2intargs(ce[4]), ce[5]->getInt(),
+                ce[6]->getSet(), ann);
+    }
+
     void
     p_sort(FlatZincSpace& s, const ConExpr& ce, AST::Node* ann) {
       IntVarArgs x = s.arg2intvarargs(ce[0]);
@@ -1332,7 +1354,7 @@ namespace Gecode { namespace FlatZinc {
 
     void p_cumulatives(FlatZincSpace& s, const ConExpr& ce,
                       AST::Node* ann) {
-      if (ce.size() == 6) {
+      if (ce.size() >= 6) {
         // Full cumulatives call
         IntVarArgs start = s.arg2intvarargs(ce[0]);
         IntVarArgs duration = s.arg2intvarargs(ce[1]);
@@ -1341,6 +1363,18 @@ namespace Gecode { namespace FlatZinc {
         IntArgs bound = s.arg2intargs(ce[4]);
         bool upper = ce[5]->getBool();
         int n = start.size();
+        // A seventh argument gives the machine number `bound` is indexed from,
+        // which a caller that cannot pass an index set has to say explicitly;
+        // the propagator numbers its machines from zero.
+        if (ce.size() == 7) {
+          int minMachine = ce[6]->getInt();
+          if (minMachine != 0) {
+            IntVarArgs shifted(n);
+            for (int i = n; (i--) != 0;)
+              shifted[i] = expr(s, machine[i] - minMachine);
+            machine = shifted;
+          }
+        }
 
         if (duration.assigned()) {
           IntArgs durationI(n);
@@ -1668,13 +1702,19 @@ namespace Gecode { namespace FlatZinc {
     void blackbox_source(AST::Node* ann, std::string& mode,
                          std::string& target,
                          std::vector<std::string>& args) {
+      // An atom is accepted alongside a string literal: a consumer that hands
+      // the model over rather than writing it out has only one kind of text
+      // value, and this annotation is the only place the two would differ.
       auto string_arg = [](AST::Node* n, const char* what) {
-        if ((n == nullptr) || !n->isString()) {
-          throw FlatZinc::Error("Registry",
-                                std::string("Malformed blackbox annotation: ") +
-                                what + " must be a string.");
+        if (n != nullptr) {
+          if (AST::Atom* a = dynamic_cast<AST::Atom*>(n))
+            return a->id;
+          if (n->isString())
+            return n->getString();
         }
-        return n->getString();
+        throw FlatZinc::Error("Registry",
+                              std::string("Malformed blackbox annotation: ") +
+                              what + " must be a string.");
       };
       AST::Call* c = nullptr;
       bool has_dll = (ann != nullptr) && ann->hasCall("blackbox_dll");
@@ -1906,6 +1946,7 @@ fvar,
         registry().add("array_int_maximum", &p_maximum);
         registry().add("gecode_regular", &p_regular);
         registry().add("gecode_regular_set", &p_regular_set);
+        registry().add("gecode_regular_offset", &p_regular_offset);
         registry().add("sort", &p_sort);
         registry().add("inverse_offsets", &p_inverse_offsets);
         registry().add("increasing_int", &p_increasing_int);
@@ -2324,17 +2365,73 @@ fvar,
       channel(s, x0, x1);
     }
 
+    /// The two operands a linear float constraint compares, if it compares two.
+    ///
+    /// `Float::linear` works out the bounds of the weighted sum, and on an
+    /// unbounded operand that overflows with "Number out of limits" where the
+    /// binary propagator is untroubled. An interface whose vocabulary is the
+    /// linear constraints alone has no way to ask for the binary one directly,
+    /// so the shapes a comparison flattens to are recognised here instead: one
+    /// term against a constant, and `x - y` either way round against zero.
+    /// Nothing is introduced and nothing is weakened — it is the same relation,
+    /// posted by the propagator written for it.
+    ///
+    /// A coefficient other than 1 is left alone rather than divided out: the
+    /// division would not be exact, and a rounded bound is a different
+    /// constraint.
+    bool float_lin_is_rel(FlatZincSpace& s, const FloatValArgs& fa,
+                          const FloatVarArgs& fv, FloatNum c,
+                          FloatVar& x, FloatVar& y) {
+      if ((fa.size() == 1) && (fa[0] == 1.0)) {
+        x = fv[0]; y = FloatVar(s, c, c); return true;
+      }
+      if ((fa.size() == 2) && (c == 0.0)) {
+        if ((fa[0] == 1.0) && (fa[1] == -1.0)) { x = fv[0]; y = fv[1]; return true; }
+        if ((fa[0] == -1.0) && (fa[1] == 1.0)) { x = fv[1]; y = fv[0]; return true; }
+      }
+      return false;
+    }
+
     void p_float_lin_cmp(FlatZincSpace& s, FloatRelType frt,
                          const ConExpr& ce, AST::Node*) {
       FloatValArgs fa = s.arg2floatargs(ce[0]);
       FloatVarArgs fv = s.arg2floatvarargs(ce[1]);
-      linear(s, fa, fv, frt, ce[2]->getFloat());
+      FloatNum c = ce[2]->getFloat();
+      FloatVar x, y;
+      if (float_lin_is_rel(s, fa, fv, c, x, y)) {
+        if (frt == FRT_LE) {
+          // As `p_float_lt`: a strict float inequality is the non-strict one
+          // beside a disequality.
+          rel(s, x, FRT_LQ, y);
+          rel(s, x, FRT_EQ, y, BoolVar(s,0,0));
+        } else {
+          rel(s, x, frt, y);
+        }
+        return;
+      }
+      linear(s, fa, fv, frt, c);
     }
     void p_float_lin_cmp_reif(FlatZincSpace& s, FloatRelType frt,
                               const ConExpr& ce, AST::Node*) {
       FloatValArgs fa = s.arg2floatargs(ce[0]);
       FloatVarArgs fv = s.arg2floatvarargs(ce[1]);
-      linear(s, fa, fv, frt, ce[2]->getFloat(), s.arg2BoolVar(ce[3]));
+      FloatNum c = ce[2]->getFloat();
+      BoolVar b = s.arg2BoolVar(ce[3]);
+      FloatVar x, y;
+      if (float_lin_is_rel(s, fa, fv, c, x, y)) {
+        if (frt == FRT_LE) {
+          // As `p_float_lt_reif`.
+          BoolVar b0(s,0,1);
+          BoolVar b1(s,0,1);
+          rel(s, b == (b0 && !b1));
+          rel(s, x, FRT_LQ, y, b0);
+          rel(s, x, FRT_EQ, y, b1);
+        } else {
+          rel(s, x, frt, y, b);
+        }
+        return;
+      }
+      linear(s, fa, fv, frt, c, b);
     }
     void p_float_lin_eq(FlatZincSpace& s, const ConExpr& ce, AST::Node* ann) {
       p_float_lin_cmp(s,FRT_EQ,ce,ann);

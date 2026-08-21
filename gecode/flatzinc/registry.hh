@@ -37,6 +37,7 @@
 #include <gecode/flatzinc.hh>
 #include <string>
 #include <map>
+#include <vector>
 
 namespace Gecode { namespace FlatZinc {
 
@@ -51,6 +52,8 @@ namespace Gecode { namespace FlatZinc {
     void add(const std::string& id, poster p);
     /// Post constraint specified by \a ce
     void post(FlatZincSpace& s, const ConExpr& ce);
+    /// Return the identifiers of all constraints that can be posted
+    std::vector<std::string> identifiers(void) const;
 
   private:
     /// The actual registry
