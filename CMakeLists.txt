@@ -120,7 +120,7 @@ option(GECODE_ENABLE_FLOAT_VARS "Build float variables module" ON)
 option(GECODE_ENABLE_MINIMODEL "Build minimodel module" ON)
 option(GECODE_ENABLE_DRIVER "Build driver module" ON)
 option(GECODE_ENABLE_FLATZINC "Build FlatZinc module" ON)
-
+option(GECODE_ENABLE_FZNSO "Build the FZnSO solver shared object" ON)
 option(GECODE_ENABLE_MPFR "Enable MPFR support" ON)
 option(GECODE_ENABLE_ALLOCATOR "Enable default allocator" ON)
 option(GECODE_ENABLE_AUDIT "Enable audit code" OFF)
@@ -1351,6 +1351,53 @@ if(GECODE_ENABLE_FLATZINC)
       INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
   endif()
   list(APPEND GECODE_INSTALL_TARGETS fzn-gecode)
+endif()
+
+# ---------------------------------------------------------------------------
+# FZnSO solver shared object
+# ---------------------------------------------------------------------------
+# The protocol recovers a solver's entry-point prefix from its file name, so the
+# library has to be `libgecode` even though CMake already has a target of that
+# name, and it lives in a `fznso` directory of its own so that it cannot be
+# confused with — or loaded instead of — real Gecode.
+if(GECODE_ENABLE_FZNSO AND GECODE_ENABLE_FLATZINC)
+  add_library(fznso-gecode SHARED ${GECODE_FZNSO_SOURCES})
+  set_target_properties(fznso-gecode PROPERTIES
+    OUTPUT_NAME gecode
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    CXX_VISIBILITY_PRESET hidden
+    LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib/fznso")
+  target_link_libraries(fznso-gecode PRIVATE gecodeflatzinc)
+  if(APPLE)
+    set_target_properties(fznso-gecode PROPERTIES
+      INSTALL_RPATH "@loader_path/..")
+  elseif(UNIX)
+    set_target_properties(fznso-gecode PROPERTIES
+      INSTALL_RPATH "$ORIGIN/..")
+  endif()
+  install(TARGETS fznso-gecode
+          LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/fznso"
+          RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/fznso")
+
+  # What a consumer of the declared constraint list still needs from a
+  # MiniZinc library: the decompositions Gecode expresses in terms of its own
+  # constraints, and the builtins it redefines.
+  install(DIRECTORY gecode/flatzinc/mznlib-fznso/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/minizinc/gecode-fznso)
+
+  # The declaration table is compiled in as well as loaded through the C ABI,
+  # so the test can check what a declared name resolves to, not only what the
+  # list says.
+  add_executable(fznso-gecode-test gecode/flatzinc/fznso-test.cpp
+                                   gecode/flatzinc/fznso-signatures.cpp)
+  target_link_libraries(fznso-gecode-test PRIVATE gecodeflatzinc)
+  set_target_properties(fznso-gecode-test PROPERTIES
+    CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+  add_dependencies(fznso-gecode-test fznso-gecode)
+  if(BUILD_TESTING)
+    add_test(NAME fznso COMMAND fznso-gecode-test $<TARGET_FILE:fznso-gecode>)
+  endif()
 endif()
 
 if(BUILD_TESTING)

@@ -73,6 +73,16 @@ namespace Gecode { namespace FlatZinc {
     r["fzn_" + id] = p;
   }
 
+  std::vector<std::string>
+  Registry::identifiers(void) const {
+    std::vector<std::string> ids;
+    ids.reserve(r.size());
+    for (std::map<std::string,poster>::const_iterator i = r.begin();
+         i != r.end(); ++i)
+      ids.push_back(i->first);
+    return ids;
+  }
+
   namespace {
 
     void p_distinct(FlatZincSpace& s, const ConExpr& ce, AST::Node* ann) {
@@ -1332,7 +1342,7 @@ namespace Gecode { namespace FlatZinc {
 
     void p_cumulatives(FlatZincSpace& s, const ConExpr& ce,
                       AST::Node* ann) {
-      if (ce.size() == 6) {
+      if (ce.size() >= 6) {
         // Full cumulatives call
         IntVarArgs start = s.arg2intvarargs(ce[0]);
         IntVarArgs duration = s.arg2intvarargs(ce[1]);
@@ -1341,6 +1351,18 @@ namespace Gecode { namespace FlatZinc {
         IntArgs bound = s.arg2intargs(ce[4]);
         bool upper = ce[5]->getBool();
         int n = start.size();
+        // A seventh argument gives the machine number `bound` is indexed from,
+        // which a caller that cannot pass an index set has to say explicitly;
+        // the propagator numbers its machines from zero.
+        if (ce.size() == 7) {
+          int minMachine = ce[6]->getInt();
+          if (minMachine != 0) {
+            IntVarArgs shifted(n);
+            for (int i = n; (i--) != 0;)
+              shifted[i] = expr(s, machine[i] - minMachine);
+            machine = shifted;
+          }
+        }
 
         if (duration.assigned()) {
           IntArgs durationI(n);
@@ -1668,13 +1690,19 @@ namespace Gecode { namespace FlatZinc {
     void blackbox_source(AST::Node* ann, std::string& mode,
                          std::string& target,
                          std::vector<std::string>& args) {
+      // An atom is accepted alongside a string literal: a consumer that hands
+      // the model over rather than writing it out has only one kind of text
+      // value, and this annotation is the only place the two would differ.
       auto string_arg = [](AST::Node* n, const char* what) {
-        if ((n == nullptr) || !n->isString()) {
-          throw FlatZinc::Error("Registry",
-                                std::string("Malformed blackbox annotation: ") +
-                                what + " must be a string.");
+        if (n != nullptr) {
+          if (AST::Atom* a = dynamic_cast<AST::Atom*>(n))
+            return a->id;
+          if (n->isString())
+            return n->getString();
         }
-        return n->getString();
+        throw FlatZinc::Error("Registry",
+                              std::string("Malformed blackbox annotation: ") +
+                              what + " must be a string.");
       };
       AST::Call* c = nullptr;
       bool has_dll = (ann != nullptr) && ann->hasCall("blackbox_dll");

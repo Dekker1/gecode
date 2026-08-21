@@ -2382,6 +2382,27 @@ namespace Gecode { namespace FlatZinc {
     );
   }
 
+  void
+  FlatZincSpace::reopen(const FlatZincSpace& from) {
+    if (_initData == nullptr)
+      _initData = new FlatZincSpaceInitData;
+    iv_introduced = from.iv_introduced;
+    bv_introduced = from.bv_introduced;
+#ifdef GECODE_HAS_SET_VARS
+    sv_introduced = from.sv_introduced;
+#endif
+#ifdef GECODE_HAS_FLOAT_VARS
+    fv_introduced = from.fv_introduced;
+#endif
+    // The alias array is space-allocated, so the copy constructor could not
+    // simply share it; re-allocate and carry the entries over.
+    iv_boolalias = alloc<int>(iv.size()+(iv.size()==0?1:0));
+    for (int i=iv.size(); i--; )
+      iv_boolalias[i] =
+        (from.iv_boolalias != nullptr && i < from.iv.size()) ?
+        from.iv_boolalias[i] : -1;
+  }
+
   IntArgs
   FlatZincSpace::arg2intargs(AST::Node* arg, int offset) {
     AST::Array* a = arg->getArray();
